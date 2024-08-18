@@ -1,1 +1,147 @@
+version: "3.8"
+services:
+  contact-support-team:
+    image: siranjeevi92/contact-support-team:2.0.0
+    container_name: contact-support-team
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo-contact-support-team
+    environment:
+      - MONGODB_HOST=mongo-contact-support-team
+      - MONGODB_PORT=27017
+      - MONGODB_DATABASE=contact_support
+  mongo-contact-support-team:
+    image: mongo
+    container_name: mongo-contact-support-team
+    volumes:
+      - mongo_contact_support_team_data:/data/db
 
+  order-management:
+    image: siranjeevi92/order-management:2.0.0
+    container_name: order-management
+    ports:
+      - "9090:9090"
+    depends_on:
+      - mongo-order-management
+      - product-inventory
+      - product-catalog
+      - shipping-and-handling
+    environment:
+      - PRODUCT_INVENTORY_API_HOST=http://product-inventory
+      - PRODUCT_CATALOG_API_HOST=http://product-catalog
+      - SHIPPING_HANDLING_API_HOST=http://shipping-and-handling
+      - SPRING_DATA_MONGODB_URI=mongodb://mongo-order-management:27017/order_management
+  mongo-order-management:
+    image: mongo
+    container_name: mongo-order-management
+    environment:
+      - MONGODB_DATABASE=order_management
+    volumes:
+      - mongo_order_management_data:/data/db
+
+  product-catalog:
+    image: siranjeevi92/product-catalog:2.0.0
+    container_name: product-catalog
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mongo-product-catalog
+    environment:
+      - MONGODB_HOST=mongo-product-catalog
+      - MONGODB_PORT=27017
+      - MONGODB_DATABASE=product_catalog
+  mongo-product-catalog:
+    image: mongo
+    container_name: mongo-product-catalog
+    volumes:
+      - mongo_product_catalog_data:/data/db
+
+  product-inventory:
+    image: siranjeevi92/product-inventory:2.0.0
+    container_name: product-inventory
+    ports:
+      - "3002:3002"
+    depends_on:
+      - postgres-product-inventory
+    environment:
+      - POSTGRES_HOST=postgres-product-inventory
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=product_inventory
+      - POSTGRES_USER=inventory_user
+      - POSTGRES_PASSWORD=inventory_password
+  postgres-product-inventory:
+    image: postgres
+    container_name: postgres-product-inventory
+    environment:
+      - POSTGRES_DB=product_inventory
+      - POSTGRES_USER=inventory_user
+      - POSTGRES_PASSWORD=inventory_password
+    volumes:
+      - postgres_product_inventory_data:/var/lib/postgres/data
+
+  profile-management:
+    image: siranjeevi92/profile-management:2.0.0
+    container_name: profile-management
+    ports:
+      - "3003:3003"
+    depends_on:
+      - mysql-profile-management
+    environment:
+      - MYSQL_HOST=mysql-profile-management
+      - MYSQL_PORT=3306
+      - MYSQL_USER=profile_user
+      - MYSQL_PASSWORD=profile_password
+      - MYSQL_DATABASE=profile_management
+  mysql-profile-management:
+    image: mysql:8.0
+    container_name: mysql-profile-management
+    environment:
+      - MYSQL_DATABASE=profile_management
+      - MYSQL_USER=profile_user
+      - MYSQL_PASSWORD=profile_password
+    volumes:
+      - mysql_profile_management_data:/var/lib/mysql
+
+  shipping-and-handling:
+    image: siranjeevi92/shipping-and-handling:2.0.0
+    container_name: shipping-and-handling
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongo-shipping-and-handling
+    environment:
+      - MONGO_URI=mongodb://mongo-shipping-and-handling:27017
+  mongo-shipping-and-handling:
+    image: mongo
+    container_name: mongo-shipping-and-handling
+    volumes:
+      - mongo_shipping_and_handling_data:/data/db
+
+  ecommerce-ui:
+    image: siranjeevi92/ecommerce-ui:2.0.0
+    container_name: ecommerce-ui
+    depends_on:
+      - profile-management
+      - product-catalog
+      - product-inventory
+      - order-management
+      - shipping-and-handling
+      - contact-support-team
+    ports:
+      - "4000:4000"
+    environment:
+      - REACT_APP_PROFILE_API_HOST=http://profile-management
+      - REACT_APP_PRODUCT_API_HOST=http://product-catalog
+      - REACT_APP_INVENTORY_API_HOST=http://product-inventory
+      - REACT_APP_ORDER_API_HOST=http://order-management
+      - REACT_APP_SHIPPING_API_HOST=http://shipping-and-handling
+      - REACT_APP_CONTACT_API_HOST=http://contact-support-team
+
+volumes:
+  mongo_product_catalog_data:
+  mongo_contact_support_team_data:
+  mongo_shipping_and_handling_data:
+  mongo_order_management_data:
+  mysql_profile_management_data:
+  postgres_product_inventory_data:
